@@ -80,6 +80,6 @@ io.on("connection", (socket) => {
 
 // 7. Listen on 0.0.0.0 for Fly.io
 const PORT = process.env.PORT || 3000;
-HTTPServer.listen(Number(PORT), () => {
+HTTPServer.listen(Number(PORT), "0.0.0.0", () => {
   console.log(`Server running in ${isProduction ? 'prod' : 'dev'} on port ${PORT}`);
 });
