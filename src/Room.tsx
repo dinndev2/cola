@@ -5,11 +5,9 @@ import { useChatSocket } from "./shared/setupsocket";
 import { CanvasContainer } from "./CanvasContainer";
 import { capitalize, generateId } from "./shared/helper";
 import Tools from "./Tools";
-import dotenv from "dotenv";
-
+import dotenv from 'dotenv'
 
 export default function Room() {
-  
   const [room, setRoom] = useState("");
   const isProduction = process.env.NODE_ENV === "production";
   const socketConnection = isProduction ? "https://cola.fly.dev" : "http://localhost:3000";
@@ -17,13 +15,11 @@ export default function Room() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
-  const [brushSize, setBrushSize] = useState(10)
-  const [currentColor, setCurrentColor] = useState("")
-  const [canvasKey, setCanvasKey] = useState(0)
+  const [brushSize, setBrushSize] = useState(10);
+  const [currentColor, setCurrentColor] = useState("");
+  const [canvasKey, setCanvasKey] = useState(0);
   const socket = useChatSocket({ url: socketConnection, roomId: room });
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-
 
   const randomName = useMemo(() => {
     const name = uniqueNamesGenerator({ 
@@ -84,13 +80,14 @@ export default function Room() {
 
   return (
     <div className="flex h-screen w-full bg-[#0b0f1a] overflow-hidden relative font-sans">
+      {/* MAIN CONTENT AREA */}
       <main className={`flex-1 flex flex-col items-center justify-center p-12 relative bg-[#111827] transition-all duration-500 ${!isSidebarOpen ? 'w-full' : 'hidden md:flex'}`}>
         
         {/* FLOAT TOGGLE BUTTON */}
         {!isSidebarOpen && (
           <button 
             onClick={() => { setIsSidebarOpen(true); setHasNewMessage(false); }}
-            className="absolute top-10 right-10 flex items-center gap-3 px-6 py-4 bg-[#1f2937] text-white rounded-[1.5rem] border border-slate-700 hover:border-blue-500/50 transition-all shadow-2xl group"
+            className="absolute top-10 right-10 flex items-center gap-3 px-6 py-4 bg-[#1f2937] text-white rounded-[1.5rem] border border-slate-700 hover:border-blue-500/50 transition-all shadow-2xl group z-30"
           >
             <div className="relative">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 group-hover:rotate-12 transition-transform">
@@ -107,32 +104,37 @@ export default function Room() {
           </button>
         )}
 
-        <CanvasContainer setCanvasKey={setCanvasKey} canvasRef={canvasRef} roomId={room} socket={socket} key={canvasKey}currentColor={currentColor} brushSize={brushSize} />
+        <CanvasContainer setCanvasKey={setCanvasKey} canvasRef={canvasRef} roomId={room} socket={socket} key={canvasKey} currentColor={currentColor} brushSize={brushSize} />
         <Tools roomId={room} socket={socket} setCanvasKey={setCanvasKey} currentColor={currentColor} setCurrentColor={setCurrentColor} brushSize={brushSize} setBrushSize={setBrushSize} />
         
         <button onClick={() => setRoom("")} className="absolute top-10 left-10 text-[10px] font-black text-slate-600 hover:text-rose-500 transition-colors uppercase tracking-[0.3em]">← Exit</button>
       </main>
 
-      {/* CHAT SIDEBAR */}
-      {isSidebarOpen && (
-        <aside className="w-full md:w-[420px] border-l border-slate-800 bg-[#0b0f1a] shadow-2xl z-20 flex flex-col animate-in slide-in-from-right duration-300">
-          <div className="flex justify-between items-center px-6 py-5 bg-[#111827] border-b border-slate-800">
-             <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Connected</span>
-             </div>
-             <button onClick={() => setIsSidebarOpen(false)} className="text-slate-500 hover:text-white transition-colors text-2xl font-light">×</button>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <ChatRoom 
-                roomId={room} 
-                socket={socket}
-                randomName={randomName} 
-                onNewMessage={() => !isSidebarOpen && setHasNewMessage(true)} 
-            />
-          </div>
-        </aside>
-      )}
+      {/* CHAT SIDEBAR - Always rendered, but hidden via CSS */}
+      <aside className={`
+        fixed inset-y-0 right-0 z-40 w-full md:w-[420px] md:relative 
+        border-l border-slate-800 bg-[#0b0f1a] shadow-2xl flex flex-col 
+        transition-all duration-300 transform
+        ${isSidebarOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none absolute md:fixed"}
+      `}>
+        <div className="flex justify-between items-center px-6 py-5 bg-[#111827] border-b border-slate-800">
+           <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Connected</span>
+           </div>
+           <button onClick={() => setIsSidebarOpen(false)} className="text-slate-500 hover:text-white transition-colors text-2xl font-light">×</button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <ChatRoom 
+              roomId={room} 
+              socket={socket}
+              randomName={randomName} 
+              onNewMessage={() => {
+                if (!isSidebarOpen) setHasNewMessage(true);
+              }} 
+          />
+        </div>
+      </aside>
     </div>
   );
 }

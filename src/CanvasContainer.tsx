@@ -20,8 +20,32 @@ interface drawType {
 export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canvasRef, setCanvasKey }: CanvasType) => {
   const isDrawing = useRef(false);
   const dpr = window.devicePixelRatio || 1;
-  // 1. PURE DRAWING LOGIC
-  // This function doesn't care about mouse state or sockets. It just paints.
+
+  // 1. HELPER: GET ACCURATE COORDINATES
+  // Necessary for mobile because touch events don't have offsetX/Y
+  const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+
+    const rect = canvas.getBoundingClientRect();
+
+    // Check if it's a touch event
+    if ('touches' in e) {
+      const touch = e.touches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      };
+    } else {
+      // It's a mouse event
+      return {
+        x: e.nativeEvent.offsetX,
+        y: e.nativeEvent.offsetY
+      };
+    }
+  };
+
+  // 2. PURE DRAWING LOGIC
   const paintLine = (x: number, y: number, color: string, size: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -30,6 +54,7 @@ export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canva
 
     ctx.lineWidth = size;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round"; // Smoother joints for mobile/fast movement
     ctx.strokeStyle = color;
 
     ctx.lineTo(x, y);
@@ -38,7 +63,7 @@ export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canva
     ctx.moveTo(x, y);
   };
 
-  // 2. SOCKET LISTENERS
+  // 3. SOCKET LISTENERS
   useEffect(() => {
     if (!socket) return;
 
@@ -61,8 +86,8 @@ export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canva
     };
 
     const clearCanvas = () => {
-      setCanvasKey(prev => prev + 1)
-    }
+      setCanvasKey(prev => prev + 1);
+    };
 
     socket.on("draw-step", handleRemoteDraw);
     socket.on("remote-stop-drawing", handleRemoteStop);
@@ -77,19 +102,19 @@ export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canva
     };
   }, [socket]);
 
-  // 3. MOUSE EVENT HANDLERS
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // 4. UNIFIED EVENT HANDLERS
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     isDrawing.current = true;
+    const { x, y } = getCoordinates(e as any);
     const ctx = canvasRef.current?.getContext("2d");
     ctx?.beginPath();
-    ctx?.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    ctx?.moveTo(x, y);
   };
 
-  const onMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const onMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing.current) return;
 
-    const x = e.nativeEvent.offsetX;
-    const y = e.nativeEvent.offsetY;
+    const { x, y } = getCoordinates(e as any);
 
     // Draw locally immediately
     paintLine(x, y, currentColor, brushSize);
@@ -108,7 +133,7 @@ export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canva
     socket?.emit("stop-drawing", roomId);
   };
 
-  // 4. RESIZE LOGIC (Kept from your original)
+  // 5. RESIZE LOGIC
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -140,11 +165,19 @@ export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canva
   return (
     <canvas 
       ref={canvasRef}
+      // Mouse Events
       onMouseDown={startDrawing} 
       onMouseUp={stopDrawing}
-      onMouseMove={onMouseMove}
+      onMouseMove={onMove}
       onMouseLeave={stopDrawing}
-      className="rounded-md bg-yellow-50 my-20 w-full h-full block touch-none"
+
+      // Touch Events (Mobile)
+      onTouchStart={startDrawing}
+      onTouchMove={onMove}
+      onTouchEnd={stopDrawing}
+      
+      // touch-none is critical to prevent the screen from scrolling while drawing
+      className="rounded-md bg-yellow-50 my-20 w-full h-full block touch-none cursor-crosshair"
     />
   );
 };
