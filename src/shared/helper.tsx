@@ -19,6 +19,3 @@ export const generateId = () => {
   return result;
 };
 
-export const socketUrl = import.meta.env.PROD 
-  ? 'https://your-production-server.com' 
-  : 'http://localhost:3000';
