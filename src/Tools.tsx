@@ -9,6 +9,8 @@ interface ToolsType {
   setCanvasKey: React.Dispatch<React.SetStateAction<number>>
   currentColor: string 
   socket: Socket | null
+  roomId: string
+
 }
 
 // Helper for generic tool button styles
@@ -20,14 +22,14 @@ const toolButtonClass = `
   border border-white/5 hover:border-white/10
 `;
 
-export default function Tools({ setBrushSize, brushSize, setCurrentColor, currentColor, setCanvasKey, socket }: ToolsType) {
+export default function Tools({ setBrushSize, brushSize, setCurrentColor, currentColor, setCanvasKey, socket, roomId }: ToolsType) {
   // Common colors for quick-picker
   const quickColors = ["#22c55e", "#ef4444", "#3b82f6", "#eab308", "#111827", "#f9fafb"]; 
 
   const resetCanvas = () => {
-    
+    socket?.emit("clear-canvas", roomId)
     setCanvasKey((prev) => prev + 1)
-  }
+  } 
   return (
     // THE GLASS CONTAINER
     <div className="

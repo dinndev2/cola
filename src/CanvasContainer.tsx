@@ -6,6 +6,8 @@ interface CanvasType {
   currentColor: string
   socket: Socket | null;
   roomId: string;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  setCanvasKey: React.Dispatch<React.SetStateAction<number>>
 }
 
 interface drawType {
@@ -15,11 +17,9 @@ interface drawType {
   brushSize: number
 }
 
-export const CanvasContainer = ({ brushSize, currentColor, socket, roomId }: CanvasType) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export const CanvasContainer = ({ brushSize, currentColor, socket, roomId, canvasRef, setCanvasKey }: CanvasType) => {
   const isDrawing = useRef(false);
   const dpr = window.devicePixelRatio || 1;
-
   // 1. PURE DRAWING LOGIC
   // This function doesn't care about mouse state or sockets. It just paints.
   const paintLine = (x: number, y: number, color: string, size: number) => {
@@ -61,16 +61,13 @@ export const CanvasContainer = ({ brushSize, currentColor, socket, roomId }: Can
     };
 
     const clearCanvas = () => {
-      const canvas = canvasRef.current;
-      canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+      setCanvasKey(prev => prev + 1)
     }
 
     socket.on("draw-step", handleRemoteDraw);
     socket.on("remote-stop-drawing", handleRemoteStop);
     socket.on("draw-history", handleHistory);
-    socket.on("clear-canvas", () => {
-      clearCanvas()
-    });
+    socket.on("clear-canvas", clearCanvas);
 
     return () => {
       socket.off("draw-step");

@@ -1,17 +1,25 @@
 import { Server } from "socket.io";
 import { createServer } from "http";
-
 const HTTPServer = createServer();
+import dotenv from 'dotenv';
+
+dotenv.config(); // Loads variables from your .env file
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+const originUrl = isProduction 
+  ? 'https://your-frontend-app.vercel.app' 
+  : 'http://localhost:5173'; // Vite default port
 
 export const io = new Server(HTTPServer, {
   cors: {
-    origin: "*", 
+    origin: originUrl 
   },
 });
 
 // In-memory data stores
-const roomMessages = {};
-const roomDrawings = {}; 
+let roomMessages = {};
+let roomDrawings = {}; 
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
@@ -84,7 +92,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = 3000;
-HTTPServer.listen(PORT, () => {
+const PORT = process.env.PORT || 3000
+HTTPServer.listen(PORT , () => {
   console.log(`Server running on port ${PORT}`);
 });

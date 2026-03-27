@@ -9,3 +9,16 @@ export const capitalize = (str: string) => {
 export const getRandomInt = (max:number) => {
   return Math.floor(Math.random() * max);
 }
+
+export const generateId = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let result = "";
+  for (let i = 0; i < 7; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+export const socketUrl = import.meta.env.PROD 
+  ? 'https://your-production-server.com' 
+  : 'http://localhost:3000';

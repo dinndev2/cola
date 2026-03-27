@@ -1,9 +1,9 @@
-import { useState, useMemo} from "react";
+import { useState, useMemo, useRef } from "react";
 import { uniqueNamesGenerator, adjectives, animals, colors } from 'unique-names-generator';
 import ChatRoom from "./ChatRoom";
 import { useChatSocket } from "./shared/setupsocket";
 import { CanvasContainer } from "./CanvasContainer";
-import { capitalize } from "./shared/helper";
+import { capitalize, generateId } from "./shared/helper";
 import Tools from "./Tools";
 
 export default function Room() {
@@ -16,15 +16,9 @@ export default function Room() {
   const [currentColor, setCurrentColor] = useState("")
   const [canvasKey, setCanvasKey] = useState(0)
   const socket = useChatSocket({ url: "http://localhost:3000", roomId: room });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const generateId = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let result = "";
-    for (let i = 0; i < 7; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
+
 
   const randomName = useMemo(() => {
     const name = uniqueNamesGenerator({ 
@@ -108,8 +102,8 @@ export default function Room() {
           </button>
         )}
 
-        <CanvasContainer roomId={room} socket={socket} key={canvasKey} currentColor={currentColor} brushSize={brushSize} />
-        <Tools socket={socket} setCanvasKey={setCanvasKey} currentColor={currentColor} setCurrentColor={setCurrentColor} brushSize={brushSize} setBrushSize={setBrushSize} />
+        <CanvasContainer setCanvasKey={setCanvasKey} canvasRef={canvasRef} roomId={room} socket={socket} key={canvasKey}currentColor={currentColor} brushSize={brushSize} />
+        <Tools roomId={room} socket={socket} setCanvasKey={setCanvasKey} currentColor={currentColor} setCurrentColor={setCurrentColor} brushSize={brushSize} setBrushSize={setBrushSize} />
         
         <button onClick={() => setRoom("")} className="absolute top-10 left-10 text-[10px] font-black text-slate-600 hover:text-rose-500 transition-colors uppercase tracking-[0.3em]">← Exit</button>
       </main>
