@@ -1,4 +1,5 @@
-import express, { Request, Response } from "express";
+import express from "express";
+import type { Request, Response } from "express"; // Use 'import type' for TS types
 import { createServer } from "http";
 import path from "path";
 import dotenv from "dotenv";
@@ -10,11 +11,12 @@ const app = express();
 const HTTPServer = createServer(app);
 
 const isProduction = process.env.NODE_ENV === "production";
-const originUrl = isProduction ? "https://cola.fly.dev" : "http://localhost:5173";
+export const originUrl = isProduction ? "https://cola.fly.dev" : "http://localhost:5173";
+const socketConnection = isProduction ? "https://cola.fly.dev" : "http://localhost:3000";
 
 // ---------------- Socket.IO ----------------
 export const io = new Server(HTTPServer, {
-  cors: { origin: originUrl, methods: ["GET", "POST"] },
+  cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
 let roomMessages: Record<string, any[]> = {};
@@ -69,7 +71,7 @@ io.on("connection", (socket) => {
 const __dirname = path.resolve();
 if (isProduction) {
   app.use(express.static(path.join(__dirname, "dist")));
-  app.get("*", (req: Request, res: Response) => {
+  app.get("*all", (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 } else {

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "start": "NODE_ENV=production tsx server.ts",
-    "dev": "tsx server.ts"
+    "dev": "vite"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",

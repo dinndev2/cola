@@ -5,9 +5,14 @@ import { useChatSocket } from "./shared/setupsocket";
 import { CanvasContainer } from "./CanvasContainer";
 import { capitalize, generateId } from "./shared/helper";
 import Tools from "./Tools";
+import dotenv from "dotenv";
+
 
 export default function Room() {
+  
   const [room, setRoom] = useState("");
+  const isProduction = process.env.NODE_ENV === "production";
+  const socketConnection = isProduction ? "https://cola.fly.dev" : "http://localhost:3000";
   const [roomInput, setRoomInput] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -15,7 +20,7 @@ export default function Room() {
   const [brushSize, setBrushSize] = useState(10)
   const [currentColor, setCurrentColor] = useState("")
   const [canvasKey, setCanvasKey] = useState(0)
-  const socket = useChatSocket({ url: "http://localhost:3000", roomId: room });
+  const socket = useChatSocket({ url: socketConnection, roomId: room });
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
 
