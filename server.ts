@@ -1,85 +1,85 @@
-import { Server } from "socket.io";
+import express, { Request, Response } from "express";
 import { createServer } from "http";
-import express from "express"; // 1. Add Express
-import path from "path";       // 2. Add Path
-import dotenv from 'dotenv';
+import path from "path";
+import dotenv from "dotenv";
+import { Server } from "socket.io";
 
 dotenv.config();
 
-const app = express(); // 3. Initialize Express
-const HTTPServer = createServer(app); // 4. Pass app to createServer
+const app = express();
+const HTTPServer = createServer(app);
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
+const originUrl = isProduction ? "https://cola.fly.dev" : "http://localhost:5173";
 
-// In production, the "origin" is the app's own URL
-const originUrl = isProduction 
-  ? 'https://cola.fly.dev'
-  : 'http://localhost:5173';
-
+// ---------------- Socket.IO ----------------
 export const io = new Server(HTTPServer, {
-  cors: {
-    origin: originUrl 
-  },
+  cors: { origin: originUrl, methods: ["GET", "POST"] },
 });
 
-// --- SERVING THE FRONTEND ---
-const __dirname = path.resolve();
-
-if (isProduction) {
-  // 5. Tell Express where your Vite build folder is
-  app.use(express.static(path.join(__dirname, "dist")));
-
-  // 6. Handle React routing (Send index.html for any route)
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-}
-
-// --- YOUR SOCKET LOGIC (Unchanged) ---
-let roomMessages: any = {};
-let roomDrawings: any = {}; 
+let roomMessages: Record<string, any[]> = {};
+let roomDrawings: Record<string, any[]> = {};
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  socket.on("join", (roomId) => {
+  socket.on("join", (roomId: string) => {
     socket.join(roomId);
     if (roomMessages[roomId]) socket.emit("room-history", roomMessages[roomId]);
     if (roomDrawings[roomId]) socket.emit("draw-history", roomDrawings[roomId]);
   });
 
   socket.on("draw-step", ({ roomId, config }) => {
-    if (!roomDrawings[roomId]) roomDrawings[roomId] = [];
-    roomDrawings[roomId].push({ ...config, type: 'draw' });
+    roomDrawings[roomId] ??= [];
+    roomDrawings[roomId].push({ ...config, type: "draw" });
     socket.to(roomId).emit("draw-step", { config });
   });
 
-  socket.on("stop-drawing", (roomId) => {
-    if (!roomDrawings[roomId]) roomDrawings[roomId] = [];
-    roomDrawings[roomId].push({ type: 'stop' });
+  socket.on("stop-drawing", (roomId: string) => {
+    roomDrawings[roomId] ??= [];
+    roomDrawings[roomId].push({ type: "stop" });
     socket.to(roomId).emit("remote-stop-drawing");
   });
 
-  socket.on("clear-canvas", (roomId) => {
+  socket.on("clear-canvas", (roomId: string) => {
     roomDrawings[roomId] = [];
     io.to(roomId).emit("clear-canvas");
   });
 
   socket.on("chat-message", ({ roomId, message }) => {
     const { content, name, profile } = message;
-    if (!roomMessages[roomId]) roomMessages[roomId] = [];
+    roomMessages[roomId] ??= [];
     const fullMessage = {
       id: Date.now().toString(),
       timestamp: Date.now(),
-      name, content, profile
+      name,
+      content,
+      profile,
     };
     roomMessages[roomId].push(fullMessage);
     io.to(roomId).emit("chat-message", { roomId, fullMessage });
   });
+
+  socket.on("disconnect", () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
 });
 
-// 7. Listen on 0.0.0.0 for Fly.io
-const PORT = process.env.PORT || 3000;
-HTTPServer.listen(Number(PORT), "0.0.0.0", () => {
-  console.log(`Server running in ${isProduction ? 'prod' : 'dev'} on port ${PORT}`);
+// ---------------- Serve Frontend ----------------
+const __dirname = path.resolve();
+if (isProduction) {
+  app.use(express.static(path.join(__dirname, "dist")));
+  app.get("*", (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+  });
+} else {
+  app.get("/", (req: Request, res: Response) => {
+    res.send("Server running in development mode");
+  });
+}
+
+// ---------------- Start Server ----------------
+const PORT = Number(process.env.PORT || 3000);
+HTTPServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running in ${isProduction ? "production" : "development"} on port ${PORT}`);
 });

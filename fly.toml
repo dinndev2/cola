@@ -15,8 +15,8 @@ primary_region = 'sin'
   processes = ["app"]  # ✅ Link service to your app process
 
 [processes]
-  app = "npm run start"
-
+  app = "NODE_ENV=production tsx server.ts"
+  
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
