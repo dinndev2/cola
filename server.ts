@@ -1,15 +1,20 @@
 import { Server } from "socket.io";
 import { createServer } from "http";
-const HTTPServer = createServer();
+import express from "express"; // 1. Add Express
+import path from "path";       // 2. Add Path
 import dotenv from 'dotenv';
 
-dotenv.config(); // Loads variables from your .env file
+dotenv.config();
+
+const app = express(); // 3. Initialize Express
+const HTTPServer = createServer(app); // 4. Pass app to createServer
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+// In production, the "origin" is the app's own URL
 const originUrl = isProduction 
-  ? 'https://your-frontend-app.vercel.app' 
-  : 'http://localhost:5173'; // Vite default port
+  ? 'https://cola.fly.dev/' // Change this to your actual Fly.io URL
+  : 'http://localhost:5173';
 
 export const io = new Server(HTTPServer, {
   cors: {
@@ -17,82 +22,64 @@ export const io = new Server(HTTPServer, {
   },
 });
 
-// In-memory data stores
-let roomMessages = {};
-let roomDrawings = {}; 
+// --- SERVING THE FRONTEND ---
+const __dirname = path.resolve();
+
+if (isProduction) {
+  // 5. Tell Express where your Vite build folder is
+  app.use(express.static(path.join(__dirname, "dist")));
+
+  // 6. Handle React routing (Send index.html for any route)
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+  });
+}
+
+// --- YOUR SOCKET LOGIC (Unchanged) ---
+let roomMessages: any = {};
+let roomDrawings: any = {}; 
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // --- JOIN LOGIC ---
   socket.on("join", (roomId) => {
     socket.join(roomId);
-    
-    // Send chat history
-    if (roomMessages[roomId]) {
-      socket.emit("room-history", roomMessages[roomId]);
-    }
-    
-    // Send drawing history so the late-comer sees the full picture
-    if (roomDrawings[roomId]) {
-      socket.emit("draw-history", roomDrawings[roomId]);
-    }
+    if (roomMessages[roomId]) socket.emit("room-history", roomMessages[roomId]);
+    if (roomDrawings[roomId]) socket.emit("draw-history", roomDrawings[roomId]);
   });
 
-  // --- DRAWING LOGIC ---
   socket.on("draw-step", ({ roomId, config }) => {
     if (!roomDrawings[roomId]) roomDrawings[roomId] = [];
-    
-    // 1. Save step to history with a 'draw' type
-    const drawData = { ...config, type: 'draw' };
-    roomDrawings[roomId].push(drawData);
-
-    // 2. Broadcast to everyone ELSE in the room
+    roomDrawings[roomId].push({ ...config, type: 'draw' });
     socket.to(roomId).emit("draw-step", { config });
   });
 
-  // Handle the end of a stroke (MouseUp / MouseLeave)
   socket.on("stop-drawing", (roomId) => {
     if (!roomDrawings[roomId]) roomDrawings[roomId] = [];
-    
-    // 1. Save a 'stop' marker so history knows where a line ends
     roomDrawings[roomId].push({ type: 'stop' });
-
-    // 2. Tell other clients to reset their paths
     socket.to(roomId).emit("remote-stop-drawing");
   });
 
-  // Handle clearing the board
   socket.on("clear-canvas", (roomId) => {
-    roomDrawings[roomId] = []; // Reset history
-    io.to(roomId).emit("clear-canvas"); // Tell everyone to wipe screens
+    roomDrawings[roomId] = [];
+    io.to(roomId).emit("clear-canvas");
   });
 
-  // --- CHAT LOGIC ---
   socket.on("chat-message", ({ roomId, message }) => {
     const { content, name, profile } = message;
     if (!roomMessages[roomId]) roomMessages[roomId] = [];
-
     const fullMessage = {
       id: Date.now().toString(),
       timestamp: Date.now(),
-      name,
-      content,
-      profile
+      name, content, profile
     };
-
     roomMessages[roomId].push(fullMessage);
-    
-    // Send to everyone in the room
     io.to(roomId).emit("chat-message", { roomId, fullMessage });
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
   });
 });
 
-const PORT = process.env.PORT || 3000
-HTTPServer.listen(PORT , () => {
-  console.log(`Server running on port ${PORT}`);
+// 7. Listen on 0.0.0.0 for Fly.io
+const PORT = process.env.PORT || 3000;
+HTTPServer.listen(Number(PORT), "0.0.0.0", () => {
+  console.log(`Server running in ${isProduction ? 'prod' : 'dev'} on port ${PORT}`);
 });
