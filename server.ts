@@ -13,7 +13,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // In production, the "origin" is the app's own URL
 const originUrl = isProduction 
-  ? 'https://cola.fly.dev/' // Change this to your actual Fly.io URL
+  ? 'https://cola.fly.dev'
   : 'http://localhost:5173';
 
 export const io = new Server(HTTPServer, {
