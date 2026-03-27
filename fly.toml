@@ -8,17 +8,17 @@ primary_region = 'sin'
 
 [build]
 
+# fly.toml updates
+
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = true # Change 'stop' to true
   auto_start_machines = true
   min_machines_running = 0
-  processes = ['app']
   protocol = "tcp"
 
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
+  cpu_kind = "shared"
   cpus = 1
-  memory_mb = 256
+  memory_mb = 512 # Increase this to 512 for a smoother build/run experience
