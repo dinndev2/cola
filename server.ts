@@ -12,11 +12,16 @@ const HTTPServer = createServer(app);
 
 const isProduction = process.env.NODE_ENV === "production";
 export const originUrl = isProduction ? "https://cola.fly.dev" : "http://localhost:5173";
-const socketConnection = isProduction ? "https://cola.fly.dev" : "http://localhost:3000";
-
 // ---------------- Socket.IO ----------------
 export const io = new Server(HTTPServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: { 
+    origin: [originUrl, "http://localhost:5173", "http://127.0.0.1:5173"], 
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  allowEIO3: true,
+  pingTimeout: 60000, // Increase for mobile stability
+  pingInterval: 25000
 });
 
 let roomMessages: Record<string, any[]> = {};
@@ -42,6 +47,13 @@ io.on("connection", (socket) => {
     roomDrawings[roomId].push({ type: "stop" });
     socket.to(roomId).emit("remote-stop-drawing");
   });
+
+  socket.on("write", ({roomId, text, x, y, currentColor}) => {
+    const config = {text, x, y, currentColor}
+    roomDrawings[roomId] ??= [];
+    roomDrawings[roomId].push({ ...config, type: "draw" });
+    socket.to(roomId).emit("write", config)
+  })
 
   socket.on("clear-canvas", (roomId: string) => {
     roomDrawings[roomId] = [];
