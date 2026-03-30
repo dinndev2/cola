@@ -11,11 +11,9 @@ export default function Room() {
   const [step, setStep] = useState(1);
   const [room, setRoom] = useState("");
   const [roomInput, setRoomInput] = useState("");
-
   const [userName, setUserName] = useState("");
   const [userColor, setUserColor] = useState("#3b82f6"); 
   const avatarColors = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#ec4899", "#f97316"];
-
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [brushSize, setBrushSize] = useState(10);
@@ -23,19 +21,19 @@ export default function Room() {
   const [canvasKey, setCanvasKey] = useState(0);
   const [isEraser, setIsEraser] = useState(false);
   const [isText, setIsText] = useState(false);
+  const [err, setErr] = useState("")
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Dynamic backend URL
   const isProduction = process.env.NODE_ENV === "production";
   const socketConnection = isProduction ? "https://cola.fly.dev" : "http://localhost:3000";
 
-  // --- SOCKET INITIALIZATION ---
   const socket = useChatSocket({ 
     url: socketConnection, 
-    roomId: room, // This remains empty until 'Launch' is clicked, preventing early errors
+    roomId: room,
     userName,    
-    userColor    
+    userColor,
+    setErr  
   });
 
   const suggestion = useMemo(() => {
@@ -56,8 +54,6 @@ export default function Room() {
     if (!currentColor) setCurrentColor(userColor); 
     setStep(3);
   };
-
-  // --- RENDER STEPS ---
 
   if (step === 1) {
     return (
@@ -136,9 +132,8 @@ export default function Room() {
     );
   }
 
-  // --- FINAL WORKSPACE STEP ---
   return (
-    <div className="flex h-screen w-full bg-[#0b0f1a] overflow-hidden relative font-sans">
+    <div className="flex h-[100dvh] w-full bg-[#0b0f1a] overflow-hidden relative font-sans">
       <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-12 relative bg-[#111827] transition-all duration-500 min-w-0">
         {!isSidebarOpen && (
           <button 
@@ -155,27 +150,30 @@ export default function Room() {
           </button>
         )}
 
-        <CanvasContainer 
+        <CanvasContainer
+          err={err}
           setIsText={setIsText} isText={isText} isEraser={isEraser} 
           setCanvasKey={setCanvasKey} canvasRef={canvasRef} roomId={room} 
           socket={socket} key={canvasKey} currentColor={currentColor} brushSize={brushSize} 
         />
         
-        <Tools 
-          isText={isText} setIsText={setIsText} isEraser={isEraser} setIsEraser={setIsEraser} 
-          roomId={room} socket={socket} setCanvasKey={setCanvasKey} currentColor={currentColor} 
-          setCurrentColor={setCurrentColor} brushSize={brushSize} setBrushSize={setBrushSize} 
-        />
+        {/* MOBILE OPTIMIZATION: Only show tools if sidebar is closed OR on Desktop */}
+        <div className={`${isSidebarOpen ? "hidden md:block" : "block"}`}>
+          <Tools 
+            isText={isText} setIsText={setIsText} isEraser={isEraser} setIsEraser={setIsEraser} 
+            roomId={room} socket={socket} setCanvasKey={setCanvasKey} currentColor={currentColor} 
+            setCurrentColor={setCurrentColor} brushSize={brushSize} setBrushSize={setBrushSize} 
+          />
+        </div>
         
         <button onClick={() => { setRoom(""); setStep(1); }} className="absolute top-10 left-10 text-[10px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-[0.3em] transition-colors">
           ← Exit Workspace
         </button>
       </main>
 
-      {/* FIXED SIDEBAR: Added flex-shrink-0 and fixed widths */}
       <aside className={`
-        fixed inset-y-0 right-0 z-40 w-full md:w-[420px] md:relative 
-        flex-shrink-0 flex flex-col /* Prevent shrinking */
+        fixed inset-y-0 right-0 z-50 w-full md:w-[420px] md:relative 
+        flex-shrink-0 flex flex-col 
         border-l border-slate-800 bg-[#0b0f1a] transition-all duration-300 transform
         ${isSidebarOpen ? "translate-x-0" : "translate-x-full md:hidden"}
       `}>
@@ -187,9 +185,9 @@ export default function Room() {
            <button onClick={() => setIsSidebarOpen(false)} className="text-slate-500 hover:text-white transition-colors text-2xl font-light">×</button>
         </div>
         
-        {/* Chat Wrapper: flex-1 ensures it fills vertical space */}
         <div className="flex-1 overflow-hidden flex flex-col">
           <ChatRoom 
+              userColor={userColor}
               roomId={room} 
               socket={socket}
               randomName={userName} 

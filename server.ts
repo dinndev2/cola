@@ -14,14 +14,11 @@ const isProduction = process.env.NODE_ENV === "production";
 export const originUrl = isProduction ? "https://cola.fly.dev" : "http://localhost:5173";
 // ---------------- Socket.IO ----------------
 export const io = new Server(HTTPServer, {
-  cors: { 
-    origin: [originUrl, "http://localhost:5173", "http://127.0.0.1:5173"], 
+  cors: {
+    origin: "*", // During testing, use "*" to see if the error disappears
     methods: ["GET", "POST"],
     credentials: true
-  },
-  allowEIO3: true,
-  pingTimeout: 60000, // Increase for mobile stability
-  pingInterval: 25000
+  }
 });
 
 let roomMessages: Record<string, any[]> = {};
@@ -42,10 +39,10 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("draw-step", { config });
   });
 
-  socket.on("stop-drawing", (roomId: string) => {
+  socket.on("stop-drawing", ({roomId, x, y}: {roomId: string, x: number, y: number}) => {
     roomDrawings[roomId] ??= [];
     roomDrawings[roomId].push({ type: "stop" });
-    socket.to(roomId).emit("remote-stop-drawing");
+    socket.to(roomId).emit("remote-stop-drawing", { roomId, x, y });
   });
 
   socket.on("write", ({roomId, text, x, y, currentColor}) => {
@@ -61,7 +58,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("chat-message", ({ roomId, message }) => {
-    const { content, name, profile } = message;
+    const { content, name, profile, senderColor } = message;
     roomMessages[roomId] ??= [];
     const fullMessage = {
       id: Date.now().toString(),
@@ -69,6 +66,7 @@ io.on("connection", (socket) => {
       name,
       content,
       profile,
+      senderColor
     };
     roomMessages[roomId].push(fullMessage);
     io.to(roomId).emit("chat-message", { roomId, fullMessage });

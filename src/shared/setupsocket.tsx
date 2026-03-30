@@ -6,9 +6,10 @@ interface UseSocketOptions {
   roomId: string;
   userName: string;
   userColor: string;
+  setErr: React.Dispatch<React.SetStateAction<string>>
 }
 
-export function useChatSocket({ url, roomId, userName, userColor }: UseSocketOptions) {
+export function useChatSocket({ url, roomId, userName, userColor, setErr }: UseSocketOptions) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -21,11 +22,10 @@ export function useChatSocket({ url, roomId, userName, userColor }: UseSocketOpt
     if (socketRef.current?.connected) return;
 
     const s = io(url, {
-      transports: ["polling", "websocket"], 
-      withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: 10,
-      timeout: 20000,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity
     });
 
     s.on("connect", () => {
@@ -35,6 +35,7 @@ export function useChatSocket({ url, roomId, userName, userColor }: UseSocketOpt
     });
 
     s.on("connect_error", (err) => {
+      setErr(`${err.message} ${err.name} ${err.cause} ${err.stack}`)
       console.error("❌ Socket Connection Error:", err.message);
     });
 
