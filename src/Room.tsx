@@ -149,7 +149,6 @@ export default function Room() {
             <span className="text-[10px] font-black uppercase tracking-widest">Open Chat</span>
           </button>
         )}
-
         <CanvasContainer
           err={err}
           setIsText={setIsText} isText={isText} isEraser={isEraser} 

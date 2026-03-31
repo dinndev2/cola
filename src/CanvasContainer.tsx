@@ -150,9 +150,11 @@ export const CanvasContainer = ({ err, setIsText, isText, isEraser, brushSize, c
     const handleRemoteDraw = ({ config }: { config: drawType }) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      const ctx = canvas.getContext("2d")
       // Convert normalized values back to current local pixels
       const lx = config.x * canvas.offsetWidth;
       const ly = config.y * canvas.offsetHeight;
+      ctx?.beginPath();
       paintLine(lx, ly, config.currentColor, config.brushSize, config.eraser);
     };
 

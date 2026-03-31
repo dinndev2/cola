@@ -22,10 +22,7 @@ export function useChatSocket({ url, roomId, userName, userColor, setErr }: UseS
     if (socketRef.current?.connected) return;
 
     const s = io(url, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity
+      transports: ["websocket"]
     });
 
     s.on("connect", () => {

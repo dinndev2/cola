@@ -15,7 +15,7 @@ export const originUrl = isProduction ? "https://cola.fly.dev" : "http://localho
 // ---------------- Socket.IO ----------------
 export const io = new Server(HTTPServer, {
   cors: {
-    origin: "*", // During testing, use "*" to see if the error disappears
+    origin: "*",
     methods: ["GET", "POST"],
     credentials: true
   }
